@@ -1,0 +1,107 @@
+#include <cstdio>
+#include <iostream>
+#include <sstream>
+
+#include <algorithm>
+#include <math.h>
+
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <queue>
+#include <stack>
+#include <map>
+#include <set>
+#include <bitset>
+#include <string>
+
+#define FOR(i, a, b) for(int i = a; i < (int)b; i++)
+#define RFOR(i, a, b) for(int i = (int)a - 1; i >= b; i--)
+#define INF 2000000000
+#define PI 3.14159265358979323846264338327950288419716939937510582
+
+using namespace std;
+
+typedef pair<int, int> ii;
+typedef vector<int> vi;
+typedef vector<vector<int>> graph;
+
+int n, m;
+
+int padding() {
+	int i = 1;
+	while (i < n) { i <<= 1; }
+	return i;
+}
+
+int getLastInRange(vi& active, int k, int l, int u, int i) {
+	if (active[1] < k) return n - 1;
+	int m = (l + u) / 2;
+	if (active[i] == k) return u;
+	else if (active[i * 2] < k) return getLastInRange(active, k - active[i * 2], m + 1, u, i * 2 + 1);
+	else return getLastInRange(active, k, l, m, i * 2);
+}
+
+int getBig(vi& nums, vi& biggest, int a, int b, int l, int u, int i) {
+	if (a == l && b == u) return biggest[i];
+	int m = (l + u) / 2;
+	if (b <= m) return getBig(nums, biggest, a, b, l, m, i * 2);
+	else if (a > m) return getBig(nums, biggest, a, b, m + 1, u, i * 2 + 1);
+	else {
+		int bA = getBig(nums, biggest, a, m, l, m, i * 2);
+		int bB = getBig(nums, biggest, m + 1, b, m + 1, u, i * 2 + 1);
+		return (nums[bA] >= nums[bB]) ? bA : bB;
+	}
+}
+
+int getActive(vi& active, int a, int b, int l, int u, int i) {
+	if (a == l && b == u) return active[i];
+	int m = (l + u) / 2;
+	if (b <= m) return getActive(active, a, b, l, m, i * 2);
+	else if (a > m) return getActive(active, a, b, m + 1, u, i * 2 + 1);
+	else return getActive(active, a, m, l, m, i * 2) + getActive(active, m + 1, b, m + 1, u, i * 2 + 1);
+}
+
+int main() {
+	int k;
+	cin >> n >> k;
+	// declare segment trees
+	m = padding();
+	vector<int> active(2 * m, 1);
+	vector<int> biggest(2 * m);
+	vector<int> nums(m, -1);
+	// read input and set segment trees
+	FOR(i, 0, n) { cin >> nums[i]; }
+	FOR(i, m, 2 * m) { biggest[i] = i - m; }
+	RFOR(i, m, 1) { biggest[i] = nums[biggest[i * 2]] >= nums[biggest[i * 2 + 1]] ? biggest[i * 2] : biggest[i * 2 + 1]; }
+	FOR(i, m + n, 2 * m) { active[i] = 0; }
+	RFOR(i, m, 1) { active[i] = active[i * 2] + active[i * 2 + 1]; }
+	// make the exchanges
+	while (k && active[1]) {
+		// find pos
+		int lastInRange = getLastInRange(active, k+1, 0, m-1, 1); // I want to know who's the last in range
+		int big = getBig(nums, biggest, 0, lastInRange, 0, m-1, 1); // selected index
+		cout << nums[big] << " ";
+		// update the k
+		k -= (getActive(active, 0, big, 0, m-1, 1) - 1); // amount of exchanges
+		// update active
+		int i = big + m;
+		while (i) {
+			active[i]--;
+			i >>= 1;
+		}
+		// update biggest
+		i = big + m;
+		nums[big] = -1;
+		i >>= 1;
+		while (i) {
+			biggest[i] = nums[biggest[i * 2]] >= nums[biggest[i * 2 + 1]] ? biggest[i * 2] : biggest[i * 2 + 1];
+			i >>= 1;
+		}
+	}
+	FOR(i, 0, n) {
+		if (nums[i] != -1) cout << nums[i] << " ";
+	}
+	cout << endl;
+	return 0;
+}
